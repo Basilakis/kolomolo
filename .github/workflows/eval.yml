@@ -26,6 +26,7 @@ jobs:
           NEO4J_USER: ${{ secrets.NEO4J_USER }}
           NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
           NEO4J_DATABASE: ${{ secrets.NEO4J_DATABASE }}
+          AGENT_MODEL: claude-haiku-4-5-20251001   # cheap tier for eval (planner + answers)
         run: python -m cpap_graphrag.eval.run_eval
       - name: Upload results
         if: always()
