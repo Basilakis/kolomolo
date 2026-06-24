@@ -70,14 +70,16 @@
   - Citation validity (do doc+page resolve), answer faithfulness (grounded-in-citations).
   - Constraint-satisfaction accuracy (#6/#7); latency p50/p95; cost/query.
 - **Observed so far:**
-  - Graph: **35 devices · 188 quantities · 15 features · 23 modes** from 28 PDFs (23 contributed).
+  - Graph: 87 device entries (incl. real sub-variants) from 28 PDFs (23 contributed device data).
+  - **Numeric precision fixed:** controlled-vocab extraction now populates **pressure_range ×35,
+    weight ×38, ramp_time ×21, noise_level ×20** (was almost all `other`). AirSense 11 pressure
+    now resolves to **4–20 cm H₂O**.
   - Live: *"pressure range of the DreamStation"* → **4–20 cm H₂O [DataSheet p.2]**, value/unit
-    guard **passed**, routed as `spec_lookup`, ≈ **$0.038/query**, low-seconds latency.
-- **GraphRAG vs vector-only baseline:** harness + baseline are built; **comparison run is the key
-  remaining step.** Hypothesis: largest GraphRAG gain on #2 (unit/range/default), #6 (numeric
-  constraints), #7 (ranking) — where vector similarity can't do numeric joins.
-- *Honest note: numeric precision is partly delivered — a parameter-mapping fix + re-ingest is the
-  next quality lever.*
+    guard **passed**, routed as `spec_lookup`, low-seconds latency.
+- **GraphRAG vs vector-only baseline:** harness + baseline + automated eval workflow are built;
+  the comparison run reruns on a small credit top-up. Hypothesis: largest GraphRAG gain on #2
+  (unit/range/default), #6 (numeric constraints), #7 (ranking) — where vector similarity can't do
+  numeric joins. *(Insert the per-metric table here once the eval run completes.)*
 
 ---
 

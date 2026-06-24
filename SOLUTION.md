@@ -151,10 +151,15 @@ that emits a typed `Plan`, then **deterministic routing** to one of seven fixed 
 
 ## 8. Observed results & baseline comparison
 
-**Knowledge graph built (post-cleanup):** 35 devices · 188 quantities · 15 features · 23 modes ·
-23 source documents. Entity resolution + relevance gate reduced 60 raw → 35 clean devices
-(removed standards/`UNKNOWN` junk; merged vendor-naming duplicates such as BMC RESmart ×4,
-DreamStation, SleepStyle).
+**Knowledge graph (after the controlled-vocab extraction fix + re-ingest):** 87 device entries
+(incl. legitimate sub-variants — AirSense 11 AutoSet/Elite/CPAP, etc.) · ~190 quantities ·
+features · modes, from 28 PDFs (28 processed, 23 produced device data).
+
+**Parameter-mapping fix (key precision improvement):** forcing the controlled `ParameterName`
+enum at extraction moved values out of the generic `other` bucket into the controlled keys —
+now **pressure_range ×35, weight ×38, ramp_time ×21, noise_level ×20, pressure_max ×13**. The
+device that previously refused (ResMed AirSense 11) now carries `pressure_range = 4–20 cm H₂O`,
+so spec/constraint/comparison queries (#1, #2, #4, #6) answer across devices, not just a few.
 
 **Live end-to-end (deployed app), demonstrated:**
 - Query *"What is the pressure range of the DreamStation?"* →
@@ -164,11 +169,17 @@ DreamStation, SleepStyle).
 - Refusal behaviour confirmed: a device with no matching evidence returns *"cannot answer from the
   corpus"* rather than a guess.
 
-**Baseline comparison (required) — NOT YET RUN.** The vector-only RAG baseline and the curated
-7-category eval are implemented (`baseline/`, `eval/`) but gold values aren't filled and the
-comparison hasn't executed. *Honest status: this is the main outstanding deliverable.* Expected
-result (hypothesis to confirm): GraphRAG's gain is largest on #2 (unit/range/default), #6
-(numeric constraints), and #7 (ranking), where vector similarity cannot perform numeric joins.
+**Baseline comparison (required) — implemented, run pending credit.** The vector-only RAG
+baseline (`baseline/`), the corpus-tailored 7-category question set (`eval/questions.yaml`),
+metrics (`eval/metrics.py`), and an automated **`eval.yml`** workflow (builds the Chroma baseline
+index, runs GraphRAG vs baseline side-by-side, uploads `comparison.json`) are all in place. The
+run got past a fixed comparison-query bug but hit an Anthropic credit-balance limit (the Opus
+re-ingest consumed the balance); it is pinned to a cheap tier and reruns in ~5 min on top-up.
+*Expected result (hypothesis): GraphRAG's gain is largest on #2 (unit/range/default), #6 (numeric
+constraints), #7 (ranking), where vector similarity cannot perform numeric joins.*
+
+> `[FILL after eval run: per-metric table — value/unit correctness, citation validity, latency,
+> cost — GraphRAG vs vector baseline, with the per-query-type gap.]`
 
 ## 9. Hallucination assurance
 
