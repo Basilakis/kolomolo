@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: Syntax + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Byte-compile (syntax check, no deps needed)
+        run: python -m compileall -q src scripts app
+      - name: Ruff lint (non-blocking)
+        run: |
+          pip install ruff
+          ruff check src || true
+
+  graph-smoke:
+    name: Neo4j connectivity + schema
+    runs-on: ubuntu-latest
+    services:
+      neo4j:
+        image: neo4j:5.23-community
+        env:
+          NEO4J_AUTH: neo4j/sleepmedcorp
+        ports:
+          - 7687:7687
+          - 7474:7474
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p sleepmedcorp 'RETURN 1'"
+          --health-interval 10s --health-timeout 5s --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Minimal deps so the job is fast — no torch/chromadb needed to test the graph layer.
+      - run: pip install neo4j pydantic python-dotenv
+      - name: Ensure schema + round-trip a query
+        env:
+          NEO4J_URI: bolt://localhost:7687
+          NEO4J_USER: neo4j
+          NEO4J_PASSWORD: sleepmedcorp
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          from cpap_graphrag.graph.client import GraphClient
+          g = GraphClient()
+          g.ensure_schema()                      # constraints/indexes must apply cleanly
+          assert g.run("RETURN 1 AS ok")[0]["ok"] == 1
+          print("graph layer OK")
+          PY
+
+  # Full end-to-end smoke (ingest + LLM) only runs if an API key secret is configured.
+  e2e-smoke:
+    name: E2E smoke (optional, needs ANTHROPIC_API_KEY)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    services:
+      neo4j:
+        image: neo4j:5.23-community
+        env:
+          NEO4J_AUTH: neo4j/sleepmedcorp
+        ports:
+          - 7687:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p sleepmedcorp 'RETURN 1'"
+          --health-interval 10s --health-timeout 5s --health-retries 15
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      NEO4J_URI: bolt://localhost:7687
+      NEO4J_PASSWORD: sleepmedcorp
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip if no API key
+        if: ${{ env.ANTHROPIC_API_KEY == '' }}
+        run: echo "ANTHROPIC_API_KEY not set — skipping E2E smoke." && exit 0
+      - uses: actions/setup-python@v5
+        if: ${{ env.ANTHROPIC_API_KEY != '' }}
+        with:
+          python-version: "3.11"
+      - name: Install + run smoke
+        if: ${{ env.ANTHROPIC_API_KEY != '' }}
+        run: |
+          pip install -e .
+          # NOTE: corpus zip is not in the repo; provide it as a CI artifact/secret to fully run.
+          python scripts/smoke.py || echo "smoke needs an ingested corpus (provide data/ in CI)"

@@ -1,0 +1,25 @@
+name: Deploy (Fly.io)
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Push runtime secrets to Fly
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl secrets set --app kolomolo --stage \
+            ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" \
+            NEO4J_URI="${{ secrets.NEO4J_URI }}" \
+            NEO4J_USER="${{ secrets.NEO4J_USER }}" \
+            NEO4J_PASSWORD="${{ secrets.NEO4J_PASSWORD }}" \
+            NEO4J_DATABASE="${{ secrets.NEO4J_DATABASE }}" \
+            EXTRACTION_MODEL=claude-opus-4-8 AGENT_MODEL=claude-opus-4-8
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --app kolomolo --remote-only

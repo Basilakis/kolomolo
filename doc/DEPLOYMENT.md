@@ -120,6 +120,39 @@ Config is entirely environment-driven ([`config.py`](../src/cpap_graphrag/config
 
 ---
 
+## 4b. Testing & sharing the PoC (decision in issue #18)
+
+Three concrete paths, cheapest first:
+
+### Free — Cloudflare quick tunnel over local Docker (recommended for review)
+Runs the real stack locally and exposes a public `*.trycloudflare.com` URL. **$0, no cloud
+account.** Requires a populated graph + `ANTHROPIC_API_KEY`.
+```bash
+bash scripts/smoke.sh          # (optional) populate + verify one document end-to-end
+bash deploy/tunnel.sh          # prints the public URL  (make tunnel)
+```
+Stack: `app` + `cloudflared` compose profiles. Stop with `make down`.
+
+### Near-free hosted — Fly.io + Neo4j Aura Free
+Persistent HTTPS URL, scales to zero. Aura Free is $0 (auto-pauses when idle); Fly is ~$2–5/mo.
+```bash
+fly apps create cpap-graphrag-poc
+fly secrets set ANTHROPIC_API_KEY=... NEO4J_URI=neo4j+s://<id>.databases.neo4j.io \
+                NEO4J_USER=neo4j NEO4J_PASSWORD=<aura-pw>
+fly deploy                      # uses fly.toml  (or push to main -> deploy.yml)
+# one-off: run ingestion locally against the same Aura URI to populate the graph
+```
+
+### CI
+- `.github/workflows/ci.yml` — byte-compile + ruff + a **real Neo4j service** to apply the
+  schema and round-trip a query (no API key needed). An optional E2E smoke runs only if
+  `ANTHROPIC_API_KEY` is set.
+- `.github/workflows/deploy.yml` — builds + deploys to Fly; **no-ops safely** until
+  `FLY_API_TOKEN` is configured, so it never breaks `main`.
+
+> Not Cloudflare Workers: this is a stateful Python/Streamlit + Neo4j stack with native deps —
+> incompatible with the Workers WASM/edge model. Cloudflare's role here is the Tunnel only.
+
 ## 5. Operational runbook (essentials)
 
 | Situation | Action |

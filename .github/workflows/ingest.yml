@@ -1,0 +1,31 @@
+name: Ingest corpus into Aura
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "PDFs to ingest (0 = all; start with 2 to test cheaply)"
+        default: "2"
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - name: Fetch corpus (private release asset)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data
+          gh release download poc-corpus -p 'cpap-datasheets-and-manuals.zip' -D data
+      - name: Ingest into Aura
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USER: ${{ secrets.NEO4J_USER }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          NEO4J_DATABASE: ${{ secrets.NEO4J_DATABASE }}
+        run: python -m cpap_graphrag.ingestion.cli ingest --limit ${{ inputs.limit }} --workers 4

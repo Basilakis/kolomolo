@@ -13,11 +13,11 @@
 
 ```
                     ┌─────────────────────── INGESTION (offline) ───────────────────────┐
-  vendor zip  ──▶   parse (PyMuPDF/pdfplumber, page-tracked)
+  vendor zip  ──▶   page-split (pypdf — byte slicing only, no content parsing)
                        │
                        ▼
-                    segment (spec-table-aware chunks, keep page)
-                       │
+                    extract per page (Claude reads PDF natively — vision+text,
+                       │                deterministic page tag from the split)
                        ▼
                     extract (Claude, schema-forced JSON:
                        device · param · {value|min|max|default, unit} · feature · mode · provenance)
@@ -53,10 +53,17 @@ pages, has-spec-table. Total docs: N, vendors: M, models: K.]`
 
 ## 3. Ingestion design
 
-- **Parsing:** `[PyMuPDF for text + page numbers; pdfplumber for spec tables. Per-element page provenance retained.]`
-- **Segmentation:** `[table-aware: spec tables kept intact as units; prose chunked ~N tokens.]`
-- **Extraction:** Claude with a **schema-forced** output (Pydantic) so every numeric value carries
-  `{value | min | max | default, raw_unit}` plus `source_doc` + `page`. No free-text numbers.
+- **No PDF parsing libraries.** We process every document **with AI**, not heuristic parsers.
+  CPAP datasheets are table-heavy, and Claude's native PDF understanding (vision + text) reads
+  spec tables more reliably than pdfplumber's geometry heuristics, which break on merged cells
+  and multi-column layouts.
+- **Page-split (pypdf):** the *only* non-AI step. pypdf slices the PDF into per-page byte ranges
+  — **no content extraction** — purely to attach a deterministic page tag to each extraction.
+  This makes the §9 citation guard trustworthy (page comes from the file, not the model's
+  self-report) and keeps the model's attention on one dense page at a time.
+- **Extraction:** Claude reads each page's PDF natively with a **schema-forced** output (Pydantic)
+  so every numeric value carries `{value | min | max | default, raw_unit}` plus `source_doc` +
+  `page` (from the split). No free-text numbers.
 - **Entity resolution:** `[normalize vendor/model strings → canonical Device; alias table; fuzzy + LLM tie-break.]`
 - **Why this shape:** directly serves query types 1–7 (see §6).
 
