@@ -1,7 +1,7 @@
 # One-command workflows. On Windows, run these from Git Bash (make is bundled) or use the
 # raw commands shown in doc/DEPLOYMENT.md. Targets assume the venv is active.
 
-.PHONY: help setup up down logs inventory ingest eval index-baseline app app-docker scale clean
+.PHONY: help setup up down logs inventory ingest eval index-baseline app app-docker scale tunnel smoke clean
 
 help:           ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -44,6 +44,12 @@ app-docker:     ## Run Neo4j + app in containers
 
 scale:          ## Start the scale preview (Neo4j + Redis broker + worker)
 	docker compose --profile scale up -d --build
+
+tunnel:         ## Expose the app on a free public URL (Cloudflare quick tunnel)
+	bash deploy/tunnel.sh
+
+smoke:          ## End-to-end smoke: ingest 1 doc + one query per category
+	bash scripts/smoke.sh
 
 clean:          ## Remove containers + volumes (DESTROYS the graph)
 	docker compose down -v

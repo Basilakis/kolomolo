@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+**/__pycache__
+*.pyc
+.env
+data/corpus/
+data/*.json
+*.zip
+.chroma/
+eval/results/
+doc/
+deploy/
+scripts/
+*.md
+!README.md
