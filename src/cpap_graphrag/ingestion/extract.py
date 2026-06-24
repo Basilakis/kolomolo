@@ -14,8 +14,10 @@ from typing import Optional
 from ..config import settings
 from ..ontology import units
 from ..ontology.features import canonical_or_other
-from ..ontology.schema import DeviceRecord, PAP_DEVICE_TYPES
+from ..ontology.schema import DeviceRecord, PAP_DEVICE_TYPES, ParameterName
 from .segment import Segment
+
+_PARAM_ENUM = [p.value for p in ParameterName]
 
 # JSON schema handed to the model as a forced tool. Mirrors ontology.schema.DeviceRecord.
 _DEVICE_PROPERTIES = {
@@ -44,8 +46,13 @@ EXTRACTION_TOOL = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "parameter": {"type": "string",
-                                      "description": "one of the controlled ParameterName values or 'other'"},
+                        "parameter": {"type": "string", "enum": _PARAM_ENUM,
+                                      "description": "Controlled parameter key. Map pressure/operating "
+                                      "range->pressure_range, max pressure->pressure_max, IPAP->ipap_range, "
+                                      "EPAP->epap_range, ramp time->ramp_time, ramp start pressure->"
+                                      "ramp_start_pressure, weight->weight, noise/sound level->noise_level, "
+                                      "humidifier levels->humidifier_levels, power->power_consumption, "
+                                      "dimensions->dimensions. Use 'other' ONLY if none genuinely fit."},
                         "raw_label": {"type": "string"},
                         "value": {"type": ["number", "null"]},
                         "min": {"type": ["number", "null"]},
@@ -110,7 +117,11 @@ _SYSTEM = (
     "Care). Those 'other' entries are discarded downstream.\n"
     "Only emit a cpap/apap/bipap device when BOTH a concrete vendor/brand AND a specific model "
     "name are present in the text. If the vendor or model is unknown/unstated, set device_type "
-    "'other' — never invent 'UNKNOWN'."
+    "'other' — never invent 'UNKNOWN'.\n"
+    "For parameters, ALWAYS use the controlled `parameter` enum key — especially the operating "
+    "pressure range (pressure_range), max pressure (pressure_max), ramp time (ramp_time), weight "
+    "(weight) and noise/sound level (noise_level). Reserve 'other' for genuinely uncategorised "
+    "specs only; do not default real specs to 'other'."
 )
 
 
