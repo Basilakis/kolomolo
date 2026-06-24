@@ -24,7 +24,9 @@ class GraphClient:
 
     def run(self, cypher: str, **params: Any) -> list[dict]:
         with self._driver.session(database=settings.neo4j_database) as session:
-            return [r.data() for r in session.run(cypher, **params)]
+            # Pass params as a positional dict, NOT **kwargs — otherwise a Cypher parameter
+            # named like a driver-reserved keyword (e.g. `parameters`, `timeout`) collides.
+            return [r.data() for r in session.run(cypher, params)]
 
     def wipe(self) -> None:
         self.run("MATCH (n) DETACH DELETE n")
