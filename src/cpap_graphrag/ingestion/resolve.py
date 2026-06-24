@@ -19,13 +19,39 @@ from collections import defaultdict
 from ..ontology.schema import DeviceRecord
 
 
+# Map vendor spellings (legal entities, sub-brands) to one brand key so the same device
+# from different documents resolves together. Extend as the corpus reveals variants.
+_VENDOR_ALIASES = {
+    "philips": "philips", "philips respironics": "philips", "philips healthcare": "philips",
+    "respironics": "philips",
+    "bmc": "bmc", "bmc medical": "bmc", "bmc medical co": "bmc", "bmc medical co ltd": "bmc",
+    "fisher paykel": "fisher_paykel", "fisher paykel healthcare": "fisher_paykel",
+    "lowenstein": "lowenstein", "lowenstein medical": "lowenstein",
+    "lowenstein medical technology": "lowenstein",
+    "mtts": "mtts", "medical technology transfer and services": "mtts",
+    "resmed": "resmed", "resvent": "resvent", "drager": "drager",
+}
+
+
+def _norm_vendor(vendor: str) -> str:
+    v = re.sub(r"[^a-z0-9 ]+", " ", vendor.lower())            # strip ™ ® punctuation
+    v = re.sub(r"\b(inc|ltd|llc|gmbh|co|corp|company|technologies?)\b", " ", v)
+    v = re.sub(r"\s+", " ", v).strip()
+    return _VENDOR_ALIASES.get(v, v)
+
+
+def _norm_model(model: str, vendor: str) -> str:
+    m = model.lower().replace(vendor.lower(), "")
+    m = re.sub(r"\(.*?\)", " ", m)                              # drop parenthetical model codes
+    m = m.replace("giii", "g3").replace("gii", "g2")           # roman-numeral normalization
+    m = re.sub(r"\b(series|system|device|kit|with .*)\b", " ", m)  # noise; keep real distinguishers
+    m = re.sub(r"[^a-z0-9]+", " ", m).strip()
+    # NB: we deliberately KEEP auto/pro/plus/max/elite/go/10/11 — they distinguish real models.
+    return m
+
+
 def _canonical_key(rec: DeviceRecord) -> tuple[str, str]:
-    vendor = rec.vendor.strip().lower()
-    model = rec.model.strip().lower()
-    model = model.replace(vendor, "")                 # drop embedded vendor name
-    model = re.sub(r"\b(autoset|auto|elite|pro|plus)\b", "", model)  # common trims; tune per corpus
-    model = re.sub(r"[^a-z0-9]+", " ", model).strip()
-    return vendor, model
+    return _norm_vendor(rec.vendor), _norm_model(rec.model, rec.vendor)
 
 
 def _merge(group: list[DeviceRecord]) -> DeviceRecord:

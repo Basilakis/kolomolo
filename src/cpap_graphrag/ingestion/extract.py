@@ -104,8 +104,13 @@ _SYSTEM = (
     "every provenance.\n"
     "A single page or table may describe SEVERAL devices (catalogs/brochures) — emit one entry "
     "per distinct device. Set device_type to cpap/apap/bipap for PAP therapy machines, and "
-    "'other' for anything that is NOT a PAP machine (masks, standalone humidifiers, oxygen "
-    "concentrators, nebulizers, ventilators, accessories) — those are discarded downstream."
+    "'other' for anything that is NOT a specific PAP product — masks, standalone humidifiers, "
+    "oxygen concentrators, nebulizers, ventilators, accessories, AND generic/regulatory text "
+    "such as standards, guidelines, or 'generic specification' tables (e.g. ARTP Standards of "
+    "Care). Those 'other' entries are discarded downstream.\n"
+    "Only emit a cpap/apap/bipap device when BOTH a concrete vendor/brand AND a specific model "
+    "name are present in the text. If the vendor or model is unknown/unstated, set device_type "
+    "'other' — never invent 'UNKNOWN'."
 )
 
 
@@ -156,8 +161,12 @@ def _extract_segment_inner(seg: Segment) -> list[DeviceRecord]:
                     rec = DeviceRecord.model_validate(dev)
                 except Exception:
                     continue
-                # RELEVANCE GATE: only PAP therapy devices enter the graph.
+                # RELEVANCE GATE: only PAP therapy devices with a real identity enter the graph.
                 if rec.device_type not in PAP_DEVICE_TYPES:
+                    continue
+                if not rec.vendor.strip() or not rec.model.strip():
+                    continue
+                if "unknown" in (rec.vendor + rec.model).lower():
                     continue
                 out.append(_enrich(rec))
     return out
