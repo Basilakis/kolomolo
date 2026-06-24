@@ -44,6 +44,14 @@ def inventory(out: Path = typer.Option(Path("data/inventory.json"), help="where 
 
 
 @app.command()
+def dedup():
+    """Merge duplicate Device nodes graph-wide by normalized vendor/model key (idempotent)."""
+    from .dedup import dedup_graph
+    removed = dedup_graph(GraphClient())
+    print(f"[green]Dedup complete: merged {removed} duplicate device node(s).[/green]")
+
+
+@app.command()
 def coverage(out: Path = typer.Option(Path("data/coverage.json"), help="where to write the report")):
     """Reconcile every corpus file against what it contributed to the graph.
 
@@ -129,6 +137,13 @@ def ingest(
     print("[cyan]load[/cyan] -> Neo4j")
     n = load_records(resolved, client=g)
     print(f"[green]Loaded {n} devices.[/green]")
+
+    # Self-healing dedup across the WHOLE graph (prevents duplicates accumulating
+    # across separate/incremental ingests — issue #7).
+    from .dedup import dedup_graph
+    removed = dedup_graph(g)
+    if removed:
+        print(f"[green]Dedup: merged {removed} duplicate device node(s).[/green]")
 
     # Mark only after a successful load, so a crash mid-run leaves files un-marked
     # (they will be re-processed on the next run — crash-safe by construction).
