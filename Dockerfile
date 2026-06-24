@@ -16,7 +16,6 @@ RUN pip install --no-cache-dir -e .
 
 # App + eval question set.
 COPY app ./app
-COPY README.md SOLUTION.md ./
 
 # Embedding model for the baseline is downloaded on first use; pre-cache at build time
 # in production to avoid a cold-start download (left out here to keep the image small).
