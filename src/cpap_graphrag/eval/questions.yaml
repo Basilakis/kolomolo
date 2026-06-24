@@ -1,0 +1,71 @@
+# Curated evaluation set — covers all seven target query categories.
+# `expected` fields are gold answers used by metrics.py for value/unit correctness.
+# FILL the gold values once the corpus is ingested (read them from the source PDFs).
+# Each item: id, category (1-7), question, expected{...}, gold_citations[].
+
+- id: q1
+  category: 1            # specification lookup
+  question: "What is the pressure range of the AirSense 11?"
+  expected:
+    parameter: pressure_range
+    min: null            # TODO fill from datasheet, e.g. 4
+    max: null            # TODO e.g. 20
+    unit: cmH2O
+  gold_citations: []     # TODO [{source_doc, page}]
+
+- id: q2
+  category: 2            # parameter / unit / range / default
+  question: "What is the default ramp time and configurable range for the DreamStation 2?"
+  expected:
+    parameter: ramp_time
+    default: null        # TODO
+    min: null
+    max: null
+    unit: min
+  gold_citations: []
+
+- id: q3
+  category: 3            # feature lookup
+  question: "Does the AirCurve 10 VAuto support integrated humidification?"
+  expected:
+    feature: integrated_humidification
+    supported: null      # TODO true/false
+  gold_citations: []
+
+- id: q4
+  category: 4            # differentiator / comparison
+  question: "How do the AirSense 11 and DreamStation 2 differ in humidification, connectivity, and noise?"
+  expected:
+    devices: ["AirSense 11", "DreamStation 2"]
+    parameters: [noise_level]
+    features: [integrated_humidification, connectivity]
+  gold_citations: []
+
+- id: q5
+  category: 5            # mode & indication
+  question: "Which devices support BiPAP ST?"
+  expected:
+    mode: "BiPAP ST"
+    devices: []          # TODO list of expected device names
+  gold_citations: []
+
+- id: q6
+  category: 6            # multi-device numeric constraint
+  question: "Which devices deliver more than 20 cmH2O, weigh under 1.5 kg, and have cellular connectivity?"
+  expected:
+    constraints:
+      - {parameter: pressure_max, op: ">", value: 20, unit: cmH2O}
+      - {parameter: weight, op: "<", value: 1.5, unit: kg}
+    features: [cellular_connectivity]
+    devices: []          # TODO expected matches
+  gold_citations: []
+
+- id: q7
+  category: 7            # patient-tailored recommendation
+  question: "Recommend a CPAP for severe OSA up to 18 cmH2O, frequent travel, with humidification."
+  expected:
+    constraints:
+      - {parameter: pressure_max, op: ">=", value: 18, unit: cmH2O}
+    desired_features: [integrated_humidification, lightweight, travel_friendly]
+    top_device: null     # TODO expected #1 ranked device
+  gold_citations: []

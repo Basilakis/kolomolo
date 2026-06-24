@@ -1,0 +1,73 @@
+# Local deployment.
+#   Core (PoC):   docker compose up -d                  -> Neo4j only (run app on host)
+#   Containerized: docker compose --profile app up -d    -> Neo4j + Streamlit app
+#   Scale preview: docker compose --profile scale up -d   -> + Redis broker + a Celery worker
+#
+# The `scale` profile is illustrative of doc/SCALE_ARCHITECTURE.md, not wired into the PoC code.
+
+services:
+  neo4j:
+    image: neo4j:5.23-community
+    container_name: cpap-neo4j
+    ports:
+      - "7474:7474"   # HTTP browser UI
+      - "7687:7687"   # Bolt (driver)
+    environment:
+      NEO4J_AUTH: neo4j/sleepmedcorp           # must match NEO4J_PASSWORD in .env
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_server_memory_heap_max__size: 2G
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "sleepmedcorp", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---- Containerized serving frontend (optional) ----
+  app:
+    build: .
+    container_name: cpap-app
+    profiles: ["app"]
+    env_file: .env
+    environment:
+      NEO4J_URI: bolt://neo4j:7687             # service name, not localhost, inside the network
+    ports:
+      - "8501:8501"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+
+  # ---- Scale preview: broker + worker (matches doc/SCALE_ARCHITECTURE.md) ----
+  redis:
+    image: redis:7-alpine
+    container_name: cpap-redis
+    profiles: ["scale"]
+    ports:
+      - "6379:6379"
+
+  worker:
+    build: .
+    container_name: cpap-worker
+    profiles: ["scale"]
+    env_file: .env
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      CELERY_BROKER_URL: redis://redis:6379/0
+    # Placeholder command — wire to a Celery app when ingestion moves onto the queue.
+    command: ["python", "-c", "print('worker image ready; add celery -A cpap_graphrag.worker worker')"]
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  neo4j_data:
+  neo4j_logs:

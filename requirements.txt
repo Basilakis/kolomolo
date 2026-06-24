@@ -1,0 +1,31 @@
+# --- Core ---
+python-dotenv>=1.0
+pydantic>=2.6
+typer>=0.12
+rich>=13.7
+
+# --- LLM (extraction + agent planning + grounded answers) ---
+anthropic>=0.40
+
+# --- Graph backend: Neo4j 5.x (server via docker compose) ---
+neo4j>=5.20            # python driver; pairs with neo4j:5.23 image in docker-compose.yml
+
+# --- Document parsing (PDF text + per-page provenance + tables) ---
+pymupdf>=1.24          # fast PDF text/layout extraction with page numbers
+pdfplumber>=0.11       # table-aware extraction for spec tables
+
+# --- Unit handling (UCUM/QUDT-aligned normalization) ---
+pint>=0.23             # quantity + unit arithmetic / canonicalization
+
+# --- Vector-only baseline RAG ---
+chromadb>=0.5
+sentence-transformers>=3.0   # local embeddings (no API cost for the baseline floor)
+
+# --- Frontend ---
+streamlit>=1.36
+pyvis>=0.3.2           # supporting-subgraph visualization
+networkx>=3.3
+
+# --- Eval ---
+pyyaml>=6.0
+pandas>=2.2

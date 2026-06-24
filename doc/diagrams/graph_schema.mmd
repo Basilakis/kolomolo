@@ -1,0 +1,26 @@
+%% CPAP knowledge-graph schema (node labels + relationships).
+%% Render: https://mermaid.live  or  `mmdc -i graph_schema.mmd -o graph_schema.png`
+flowchart LR
+    V["Vendor<br/>name"]
+    D["Device<br/>canonical_name · model<br/>device_type · aliases"]
+    Q["Quantity<br/>parameter · min/max/default<br/>raw_unit · unit_ucum · qudt_kind<br/>canonical_min/max/value"]
+    F["Feature<br/>key · name · supported"]
+    M["Mode<br/>name"]
+    DOC["Document<br/>name (+ page on edge)"]
+
+    D -- MADE_BY --> V
+    D -- "HAS_PARAMETER" --> Q
+    D -- "HAS_FEATURE {supported}" --> F
+    D -- SUPPORTS_MODE --> M
+    Q -- "SOURCED_FROM {page}" --> DOC
+    F -- "SOURCED_FROM {page}" --> DOC
+    M -- "SOURCED_FROM {page}" --> DOC
+
+    classDef core fill:#e8f5e9,stroke:#2e7d32;
+    classDef prov fill:#fff3e0,stroke:#ef6c00;
+    class D,Q,F,M core;
+    class DOC prov;
+
+    %% Query-type hooks:
+    %% #1/#2 Device->Quantity  ·  #3/#4 Device->Feature  ·  #5 Device->Mode
+    %% #6 numeric+feature filter on canonical_* + Feature.key  ·  #7 candidate evidence + ranking

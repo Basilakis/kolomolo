@@ -1,0 +1,40 @@
+%% CPAP GraphRAG — system architecture (two planes sharing only the graph).
+%% Render: https://mermaid.live  or  `mmdc -i architecture.mmd -o architecture.png`
+flowchart TB
+    subgraph ING["INGESTION PLANE — offline, batch"]
+        direction TB
+        ZIP[/"vendor zip<br/>27 PDFs"/] --> INV["inventory<br/>(+ OCR/coverage flags)"]
+        INV --> HASH{"content-hash<br/>already ingested?"}
+        HASH -- "yes" --> SKIP["skip (cheap re-run)"]
+        HASH -- "no" --> PARSE["parse<br/>PyMuPDF + pdfplumber<br/>(page-tracked)"]
+        PARSE --> SEG["segment<br/>(table-aware)"]
+        SEG --> EXT["extract<br/>Claude Opus, schema-forced<br/>multi-device + relevance gate"]
+        EXT --> NORM["normalize units<br/>UCUM/QUDT + SI canonical"]
+        NORM --> RES["entity resolution<br/>(vendor naming)"]
+        RES --> LOAD["load — idempotent MERGE"]
+    end
+
+    LOAD --> GRAPH[("Neo4j knowledge graph<br/>Device · Quantity · Feature · Mode<br/>+ SOURCED_FROM{page} provenance")]
+
+    subgraph SRV["SERVING PLANE — online, per-query"]
+        direction TB
+        Q[/"user question"/] --> PLAN["planner<br/>Claude Sonnet<br/>classify into 1 of 7 + slots"]
+        PLAN --> ROUTE{"route by query type"}
+        ROUTE --> CY["fixed Cypher template<br/>(per query type)"]
+        CY --> ANS["grounded answer<br/>+ citations + subgraph"]
+        ANS --> VERIFY["value/unit verification<br/>(detect ungrounded numbers)"]
+        VERIFY --> REFUSE{"evidence?"}
+        REFUSE -- "no" --> NOANS["refuse"]
+        REFUSE -- "yes" --> UI["Streamlit<br/>answer + subgraph + source page"]
+    end
+
+    GRAPH --> CY
+
+    subgraph BASE["BASELINE (comparison only)"]
+        Q -.-> VEC["Chroma vector RAG<br/>(local embeddings)"] -.-> UIB["answer (no numeric joins)"]
+    end
+
+    classDef llm fill:#ede7f6,stroke:#5e35b1;
+    classDef store fill:#e3f2fd,stroke:#1565c0;
+    class EXT,PLAN,ANS llm;
+    class GRAPH,VEC store;
