@@ -1,0 +1,35 @@
+name: Evaluate (GraphRAG vs baseline)
+on:
+  workflow_dispatch:
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - name: Fetch corpus (private release asset)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data
+          gh release download poc-corpus -p 'cpap-datasheets-and-manuals.zip' -D data
+      - name: Build vector-only baseline index (local embeddings)
+        run: python -c "from cpap_graphrag.baseline.vector_rag import build_index; print(build_index(), 'chunks')"
+      - name: Run eval (GraphRAG vs vector baseline)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USER: ${{ secrets.NEO4J_USER }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          NEO4J_DATABASE: ${{ secrets.NEO4J_DATABASE }}
+        run: python -m cpap_graphrag.eval.run_eval
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: eval/results/comparison.json

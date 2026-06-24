@@ -1,71 +1,49 @@
-# Curated evaluation set — covers all seven target query categories.
-# `expected` fields are gold answers used by metrics.py for value/unit correctness.
-# FILL the gold values once the corpus is ingested (read them from the source PDFs).
-# Each item: id, category (1-7), question, expected{...}, gold_citations[].
+# Curated evaluation set — covers the seven target query categories, using devices that are
+# actually present in the ingested corpus (so the GraphRAG-vs-baseline comparison is meaningful).
+# `expected` value/unit gold are filled where verifiable from the source PDFs; left null otherwise
+# (those items still measure citations / latency / cost and the GraphRAG-vs-baseline gap).
 
 - id: q1
   category: 1            # specification lookup
-  question: "What is the pressure range of the AirSense 11?"
-  expected:
-    parameter: pressure_range
-    min: null            # TODO fill from datasheet, e.g. 4
-    max: null            # TODO e.g. 20
-    unit: cmH2O
-  gold_citations: []     # TODO [{source_doc, page}]
+  question: "What is the pressure range of the Philips DreamStation CPAP?"
+  expected: {parameter: pressure_range, min: 4, max: 20, unit: cmH2O}
+  gold_citations: []
 
 - id: q2
   category: 2            # parameter / unit / range / default
-  question: "What is the default ramp time and configurable range for the DreamStation 2?"
-  expected:
-    parameter: ramp_time
-    default: null        # TODO
-    min: null
-    max: null
-    unit: min
+  question: "What is the Smart Ramp time range for the DreamStation CPAP?"
+  expected: {parameter: ramp_time, min: 0, max: 45, unit: min}
   gold_citations: []
 
 - id: q3
   category: 3            # feature lookup
-  question: "Does the AirCurve 10 VAuto support integrated humidification?"
-  expected:
-    feature: integrated_humidification
-    supported: null      # TODO true/false
+  question: "Does the ResMed AirSense 11 support integrated humidification?"
+  expected: {feature: integrated_humidification, supported: true}
   gold_citations: []
 
 - id: q4
   category: 4            # differentiator / comparison
-  question: "How do the AirSense 11 and DreamStation 2 differ in humidification, connectivity, and noise?"
-  expected:
-    devices: ["AirSense 11", "DreamStation 2"]
-    parameters: [noise_level]
-    features: [integrated_humidification, connectivity]
+  question: "How do the ResMed AirSense 11 and Philips DreamStation CPAP differ in pressure range and humidification?"
+  expected: {devices: ["AirSense 11", "DreamStation"], parameters: [pressure_range], features: [integrated_humidification]}
   gold_citations: []
 
 - id: q5
   category: 5            # mode & indication
-  question: "Which devices support BiPAP ST?"
-  expected:
-    mode: "BiPAP ST"
-    devices: []          # TODO list of expected device names
+  question: "Which devices support auto-adjusting (APAP) therapy?"
+  expected: {mode: "APAP"}
   gold_citations: []
 
 - id: q6
   category: 6            # multi-device numeric constraint
-  question: "Which devices deliver more than 20 cmH2O, weigh under 1.5 kg, and have cellular connectivity?"
+  question: "Which devices deliver a maximum pressure of at least 20 cmH2O?"
   expected:
-    constraints:
-      - {parameter: pressure_max, op: ">", value: 20, unit: cmH2O}
-      - {parameter: weight, op: "<", value: 1.5, unit: kg}
-    features: [cellular_connectivity]
-    devices: []          # TODO expected matches
+    constraints: [{parameter: pressure_max, op: ">=", value: 20, unit: cmH2O}]
   gold_citations: []
 
 - id: q7
   category: 7            # patient-tailored recommendation
-  question: "Recommend a CPAP for severe OSA up to 18 cmH2O, frequent travel, with humidification."
+  question: "Recommend a CPAP for obstructive sleep apnoea needing up to 20 cmH2O with humidification."
   expected:
-    constraints:
-      - {parameter: pressure_max, op: ">=", value: 18, unit: cmH2O}
-    desired_features: [integrated_humidification, lightweight, travel_friendly]
-    top_device: null     # TODO expected #1 ranked device
+    constraints: [{parameter: pressure_max, op: ">=", value: 20, unit: cmH2O}]
+    desired_features: [integrated_humidification]
   gold_citations: []
