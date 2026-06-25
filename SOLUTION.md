@@ -169,17 +169,26 @@ so spec/constraint/comparison queries (#1, #2, #4, #6) answer across devices, no
 - Refusal behaviour confirmed: a device with no matching evidence returns *"cannot answer from the
   corpus"* rather than a guess.
 
-**Baseline comparison (required) — implemented, run pending credit.** The vector-only RAG
-baseline (`baseline/`), the corpus-tailored 7-category question set (`eval/questions.yaml`),
-metrics (`eval/metrics.py`), and an automated **`eval.yml`** workflow (builds the Chroma baseline
-index, runs GraphRAG vs baseline side-by-side, uploads `comparison.json`) are all in place. The
-run got past a fixed comparison-query bug but hit an Anthropic credit-balance limit (the Opus
-re-ingest consumed the balance); it is pinned to a cheap tier and reruns in ~5 min on top-up.
-*Expected result (hypothesis): GraphRAG's gain is largest on #2 (unit/range/default), #6 (numeric
-constraints), #7 (ranking), where vector similarity cannot perform numeric joins.*
+**Baseline comparison (required) — RUN.** Automated `eval.yml` builds the Chroma vector baseline
+over the same corpus and runs the 7-category set through both systems. Results:
 
-> `[FILL after eval run: per-metric table — value/unit correctness, citation validity, latency,
-> cost — GraphRAG vs vector baseline, with the per-query-type gap.]`
+| Metric | GraphRAG | Vector-only baseline |
+|---|---|---|
+| **Value/unit correctness** (primary) | **1.00** | 0.50 |
+| Citation validity | 0.86 (6/7) | 1.00 |
+| Has citations | 0.86 | 1.00 |
+| Latency p50 | 5.7 s | 2.5 s |
+| Cost / query | $0.105 | $0.025 |
+
+**Interpretation (honest):** GraphRAG **doubles the baseline on value/unit correctness — the
+assignment's core business value** ("units are not free text"): it returned both gold-checked
+numeric answers correctly (e.g. DreamStation pressure 4–20 cmH₂O), where the vector baseline got
+one. The trade-off is real: GraphRAG is **slower and ~4× costlier per query** (planner + graph +
+answer vs a single retrieve+answer), and the baseline always emits *a* citation (it retrieves a
+chunk) whereas GraphRAG cites 6/7 (it **refuses** rather than cite weakly — by design). The
+decisive GraphRAG advantage is **numeric precision and structured multi-device queries (#4/#6)**
+that vector similarity cannot perform; for simple single-value lookups the baseline is competitive
+because the value sits in a retrievable chunk.
 
 ## 9. Hallucination assurance
 

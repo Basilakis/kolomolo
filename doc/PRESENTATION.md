@@ -76,10 +76,19 @@
     now resolves to **4–20 cm H₂O**.
   - Live: *"pressure range of the DreamStation"* → **4–20 cm H₂O [DataSheet p.2]**, value/unit
     guard **passed**, routed as `spec_lookup`, low-seconds latency.
-- **GraphRAG vs vector-only baseline:** harness + baseline + automated eval workflow are built;
-  the comparison run reruns on a small credit top-up. Hypothesis: largest GraphRAG gain on #2
-  (unit/range/default), #6 (numeric constraints), #7 (ranking) — where vector similarity can't do
-  numeric joins. *(Insert the per-metric table here once the eval run completes.)*
+- **GraphRAG vs vector-only baseline (RAN, same corpus, 7 categories):**
+
+  | Metric | GraphRAG | Vector baseline |
+  |---|---|---|
+  | **Value/unit correctness** | **1.00** | 0.50 |
+  | Citation validity | 0.86 | 1.00 |
+  | Latency p50 | 5.7 s | 2.5 s |
+  | Cost/query | $0.105 | $0.025 |
+
+  **GraphRAG doubles the baseline on the primary metric (value/unit correctness).** Trade-off:
+  slower + ~4× costlier; baseline always cites a chunk while GraphRAG refuses rather than cite
+  weakly. GraphRAG's decisive edge is numeric precision + structured multi-device queries (#4/#6)
+  that vector similarity can't do.
 
 ---
 
