@@ -15,7 +15,8 @@ from .client import GraphClient
 # --- #1 Specification lookup ------------------------------------------------- #
 Q_SPEC_LOOKUP = """
 MATCH (d:Device)-[:HAS_PARAMETER]->(q:Quantity)-[s:SOURCED_FROM]->(doc:Document)
-WHERE toLower(d.canonical_name) CONTAINS toLower($device)
+WHERE all(tok IN [t IN split(toLower($device),' ') WHERE size(t)>1]
+          WHERE toLower(d.canonical_name) CONTAINS tok)
   AND ($parameter IS NULL OR q.parameter = $parameter)
 RETURN d.canonical_name AS device, q.parameter AS parameter, q.raw_label AS label,
        q.value AS value, q.min AS min, q.max AS max, q.default AS default,
@@ -32,7 +33,8 @@ Q_PARAM_DETAIL = Q_SPEC_LOOKUP  # parameter filter makes it specific; reuse.
 # falling back to a text match on name/label for free-text queries.
 Q_FEATURE_LOOKUP = """
 MATCH (d:Device)-[r:HAS_FEATURE]->(f:Feature)-[s:SOURCED_FROM]->(doc:Document)
-WHERE toLower(d.canonical_name) CONTAINS toLower($device)
+WHERE all(tok IN [t IN split(toLower($device),' ') WHERE size(t)>1]
+          WHERE toLower(d.canonical_name) CONTAINS tok)
   AND ($feature IS NULL OR f.key = $feature
        OR toLower(f.name) CONTAINS toLower($feature)
        OR toLower(f.raw_label) CONTAINS toLower($feature))
@@ -45,7 +47,8 @@ RETURN d.canonical_name AS device, f.key AS feature_key, f.name AS feature,
 # Join N devices on a shared parameter so the answer can table them side by side.
 Q_COMPARE_PARAM = """
 MATCH (d:Device)-[:HAS_PARAMETER]->(q:Quantity)-[s:SOURCED_FROM]->(doc:Document)
-WHERE any(name IN $devices WHERE toLower(d.canonical_name) CONTAINS toLower(name))
+WHERE any(name IN $devices WHERE all(tok IN [t IN split(toLower(name),' ') WHERE size(t)>1]
+                                     WHERE toLower(d.canonical_name) CONTAINS tok))
   AND ($parameters IS NULL OR q.parameter IN $parameters)
 RETURN d.canonical_name AS device, q.parameter AS parameter,
        q.value AS value, q.min AS min, q.max AS max, q.default AS default,
