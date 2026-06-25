@@ -40,7 +40,7 @@ def score_candidates(evidence_rows: list[dict], plan: Plan) -> list[dict]:
             p = params.get(c["parameter"])
             if not p:
                 continue
-            mag = p.get("cmax") if p.get("cmax") is not None else p.get("cmin")
+            mag = next((p.get(k) for k in ("cmax", "cmin", "cval") if p.get(k) is not None), None)
             if mag is None:
                 continue
             ok = {
@@ -87,8 +87,17 @@ def execute(plan: Plan, g: GraphClient) -> dict:
 
     if qt == QueryType.MULTI_CONSTRAINT:
         canon = _canonicalize(plan.constraints)
-        return {"query_type": qt.value,
-                "rows": Q.multi_constraint(g, canon, features=plan.features or None)}
+        names = [r["device"] for r in Q.multi_constraint(g, canon, features=plan.features or None)]
+        # enrich matches with the satisfying parameter + provenance so the answer can cite
+        param_keys = {c["parameter"] for c in canon}
+        rows = []
+        for cand in (Q.candidate_evidence(g, names) if names else []):
+            for p in cand.get("parameters", []):
+                if p.get("parameter") in param_keys and p.get("doc"):
+                    rows.append({"device": cand["device"], "parameter": p["parameter"],
+                                 "min": p.get("min"), "max": p.get("max"), "value": p.get("value"),
+                                 "unit": p.get("unit"), "source_doc": p.get("doc"), "page": p.get("page")})
+        return {"query_type": qt.value, "rows": rows or [{"device": n} for n in names]}
 
     if qt == QueryType.RECOMMENDATION:
         # 1) narrow candidates by HARD constraints (numeric + required features),

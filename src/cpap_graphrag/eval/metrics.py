@@ -26,7 +26,9 @@ def value_unit_correct(answer_text: str, expected: dict) -> Optional[bool]:
         return None  # gold not filled
     text = answer_text.lower().replace("₂", "2")
     nums_ok = all(re.search(rf"(?<!\d){re.escape(str(t))}(?!\d)", text) for t in targets)
-    unit_ok = (unit is None) or (unit.lower().replace("₂", "2") in text)
+    # compare units ignoring spaces ("cmH2O" == "cm H2O") and case
+    norm = lambda s: s.lower().replace("₂", "2").replace(" ", "")
+    unit_ok = (unit is None) or (norm(unit) in norm(answer_text))
     return bool(nums_ok and unit_ok)
 
 

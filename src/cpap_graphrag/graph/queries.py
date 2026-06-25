@@ -99,8 +99,8 @@ OPTIONAL MATCH (d)-[hf:HAS_FEATURE]->(f:Feature)-[sf:SOURCED_FROM]->(fd:Document
 OPTIONAL MATCH (d)-[:SUPPORTS_MODE]->(m:Mode)
 RETURN d.canonical_name AS device,
        collect(DISTINCT {parameter:q.parameter, min:q.min, max:q.max, value:q.value,
-                         cmin:q.canonical_min, cmax:q.canonical_max, unit:q.raw_unit,
-                         doc:pd.name, page:sp.page}) AS parameters,
+                         cmin:q.canonical_min, cmax:q.canonical_max, cval:q.canonical_value,
+                         unit:q.raw_unit, doc:pd.name, page:sp.page}) AS parameters,
        collect(DISTINCT {feature:f.name, supported:hf.supported, doc:fd.name, page:sf.page}) AS features,
        collect(DISTINCT m.name) AS modes
 """
